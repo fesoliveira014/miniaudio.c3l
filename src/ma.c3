@@ -1,7 +1,8 @@
 module ma;
 
-faultdef AT_END_REACHED,
-         FAILED;
+faultdef
+    AT_END_REACHED,
+    FAILED;
 
 $assert AllocationCallbacks::size == 32;
 $assert Format.F32.ordinal == 5;
