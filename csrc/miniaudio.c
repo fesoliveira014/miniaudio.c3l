@@ -28,7 +28,11 @@
 #pragma warning(pop)
 #endif
 
-#define C3MA_ALIGNMENT_OF(type) offsetof(struct { char padding; type value; }, value)
+#if defined(_MSC_VER) && !defined(__clang__)
+#define C3MA_ALIGNMENT_OF(type) __alignof(type)
+#else
+#define C3MA_ALIGNMENT_OF(type) _Alignof(type)
+#endif
 
 size_t c3ma_engine_size(void) {
     return sizeof(ma_engine);
