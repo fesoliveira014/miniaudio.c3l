@@ -1,0 +1,9 @@
+{
+  "provides": "miniaudio",
+  "sources": [ "src/**" ],
+  "c-sources": [ "csrc/miniaudio.c" ],
+  "targets": {
+    "linux-x64": { "dependencies": [], "linked-libraries": [ "dl", "pthread", "m" ] },
+    "windows-x64": { "wincrt": "static", "dependencies": [], "linked-libraries": [] }
+  }
+}
