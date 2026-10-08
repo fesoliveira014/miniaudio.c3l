@@ -1,0 +1,171 @@
+module ma;
+
+typedef Engine = void;
+typedef Sound = void;
+typedef Decoder = void;
+typedef AudioBuffer = void;
+alias SoundGroup = Sound;
+
+typedef Result = int;
+typedef Bool32 = uint;
+
+alias MallocFn = fn void* (usz size, void* user);
+alias ReallocFn = fn void* (void* pointer, usz size, void* user);
+alias FreeFn = fn void (void* pointer, void* user);
+
+struct AllocationCallbacks {
+    void* user;
+    MallocFn on_malloc;
+    ReallocFn on_realloc;
+    FreeFn on_free;
+}
+
+enum Format : int {
+    UNKNOWN,
+    U8,
+    S16,
+    S24,
+    S32,
+    F32,
+}
+
+enum AttenuationModel : int {
+    NONE,
+    INVERSE,
+    LINEAR,
+    EXPONENTIAL,
+}
+
+const Result SUCCESS = (Result)0;
+const Result AT_END = (Result)-17;
+
+const uint SOUND_FLAG_STREAM = 0x00000001;
+const uint SOUND_FLAG_DECODE = 0x00000002;
+const uint SOUND_FLAG_ASYNC = 0x00000004;
+const uint SOUND_FLAG_WAIT_INIT = 0x00000008;
+const uint SOUND_FLAG_UNKNOWN_LENGTH = 0x00000010;
+const uint SOUND_FLAG_LOOPING = 0x00000020;
+const uint SOUND_FLAG_NO_DEFAULT_ATTACHMENT = 0x00001000;
+const uint SOUND_FLAG_NO_PITCH = 0x00002000;
+const uint SOUND_FLAG_NO_SPATIALIZATION = 0x00004000;
+
+extern fn usz engine_size() @cname("c3ma_engine_size");
+extern fn usz sound_size() @cname("c3ma_sound_size");
+extern fn usz decoder_size() @cname("c3ma_decoder_size");
+extern fn usz audio_buffer_size() @cname("c3ma_audio_buffer_size");
+extern fn usz object_alignment() @cname("c3ma_object_alignment");
+
+extern fn Result engine_init(
+    Engine* engine,
+    uint channels,
+    uint sample_rate,
+    bool no_device,
+    AllocationCallbacks* callbacks,
+) @cname("c3ma_engine_init");
+extern fn Result decoder_init_memory(
+    void* bytes,
+    usz length,
+    AllocationCallbacks* callbacks,
+    Decoder* decoder,
+) @cname("c3ma_decoder_init_memory");
+extern fn Result audio_buffer_init(
+    float* frames,
+    ulong frame_count,
+    uint channels,
+    uint sample_rate,
+    AllocationCallbacks* callbacks,
+    AudioBuffer* buffer,
+) @cname("c3ma_audio_buffer_init");
+
+extern fn void engine_uninit(Engine* engine) @cname("ma_engine_uninit");
+extern fn Result engine_read_pcm_frames(
+    Engine* engine,
+    void* frames_out,
+    ulong frame_count,
+    ulong* frames_read,
+) @cname("ma_engine_read_pcm_frames");
+extern fn uint engine_get_channels(Engine* engine) @cname("ma_engine_get_channels");
+extern fn uint engine_get_sample_rate(Engine* engine) @cname("ma_engine_get_sample_rate");
+extern fn Result engine_set_volume(Engine* engine, float volume) @cname("ma_engine_set_volume");
+extern fn void engine_listener_set_position(
+    Engine* engine,
+    uint listener_index,
+    float x,
+    float y,
+    float z,
+) @cname("ma_engine_listener_set_position");
+extern fn void engine_listener_set_direction(
+    Engine* engine,
+    uint listener_index,
+    float x,
+    float y,
+    float z,
+) @cname("ma_engine_listener_set_direction");
+extern fn void engine_listener_set_world_up(
+    Engine* engine,
+    uint listener_index,
+    float x,
+    float y,
+    float z,
+) @cname("ma_engine_listener_set_world_up");
+
+extern fn Result sound_init_from_data_source(
+    Engine* engine,
+    void* data_source,
+    uint flags,
+    SoundGroup* group,
+    Sound* sound,
+) @cname("ma_sound_init_from_data_source");
+extern fn void sound_uninit(Sound* sound) @cname("ma_sound_uninit");
+extern fn Result sound_start(Sound* sound) @cname("ma_sound_start");
+extern fn Result sound_stop(Sound* sound) @cname("ma_sound_stop");
+extern fn Result sound_seek_to_pcm_frame(Sound* sound, ulong frame_index) @cname("ma_sound_seek_to_pcm_frame");
+extern fn void sound_set_volume(Sound* sound, float volume) @cname("ma_sound_set_volume");
+extern fn void sound_set_pitch(Sound* sound, float pitch) @cname("ma_sound_set_pitch");
+extern fn void sound_set_position(Sound* sound, float x, float y, float z) @cname("ma_sound_set_position");
+extern fn void sound_set_min_distance(Sound* sound, float distance) @cname("ma_sound_set_min_distance");
+extern fn void sound_set_max_distance(Sound* sound, float distance) @cname("ma_sound_set_max_distance");
+extern fn void sound_set_attenuation_model(
+    Sound* sound,
+    AttenuationModel model,
+) @cname("ma_sound_set_attenuation_model");
+extern fn void sound_set_rolloff(Sound* sound, float rolloff) @cname("ma_sound_set_rolloff");
+extern fn void sound_set_doppler_factor(Sound* sound, float factor) @cname("ma_sound_set_doppler_factor");
+extern fn void sound_set_looping(Sound* sound, Bool32 looping) @cname("ma_sound_set_looping");
+extern fn void sound_set_spatialization_enabled(
+    Sound* sound,
+    Bool32 enabled,
+) @cname("ma_sound_set_spatialization_enabled");
+extern fn Bool32 sound_at_end(Sound* sound) @cname("ma_sound_at_end");
+extern fn Bool32 sound_is_playing(Sound* sound) @cname("ma_sound_is_playing");
+
+extern fn Result sound_group_init(
+    Engine* engine,
+    uint flags,
+    SoundGroup* parent,
+    SoundGroup* group,
+) @cname("ma_sound_group_init");
+extern fn void sound_group_uninit(SoundGroup* group) @cname("ma_sound_group_uninit");
+extern fn void sound_group_set_volume(SoundGroup* group, float volume) @cname("ma_sound_group_set_volume");
+
+extern fn Result decoder_uninit(Decoder* decoder) @cname("ma_decoder_uninit");
+extern fn Result decoder_get_length_in_pcm_frames(
+    Decoder* decoder,
+    ulong* length,
+) @cname("ma_decoder_get_length_in_pcm_frames");
+extern fn Result decoder_read_pcm_frames(
+    Decoder* decoder,
+    void* frames_out,
+    ulong frame_count,
+    ulong* frames_read,
+) @cname("ma_decoder_read_pcm_frames");
+extern fn Result decoder_get_data_format(
+    Decoder* decoder,
+    Format* format,
+    uint* channels,
+    uint* sample_rate,
+    char* channel_map,
+    usz channel_map_capacity,
+) @cname("ma_decoder_get_data_format");
+
+extern fn void audio_buffer_uninit(AudioBuffer* buffer) @cname("ma_audio_buffer_uninit");
