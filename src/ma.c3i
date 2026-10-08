@@ -39,11 +39,6 @@ enum AttenuationModel : int {
 const Result SUCCESS = (Result)0;
 const Result AT_END = (Result)-17;
 
-const uint SOUND_FLAG_STREAM = 0x00000001;
-const uint SOUND_FLAG_DECODE = 0x00000002;
-const uint SOUND_FLAG_ASYNC = 0x00000004;
-const uint SOUND_FLAG_WAIT_INIT = 0x00000008;
-const uint SOUND_FLAG_UNKNOWN_LENGTH = 0x00000010;
 const uint SOUND_FLAG_LOOPING = 0x00000020;
 const uint SOUND_FLAG_NO_DEFAULT_ATTACHMENT = 0x00001000;
 const uint SOUND_FLAG_NO_PITCH = 0x00002000;
