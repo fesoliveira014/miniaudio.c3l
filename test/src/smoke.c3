@@ -120,3 +120,90 @@ fn void test_engine_without_device_mixes_a_decoded_sound() @test {
     foreach (sample : frames) peak = math::max(peak, math::abs(sample));
     assert(peak > AUDIBLE_PEAK, "peak %f", peak);
 }
+
+struct AllocationCounts {
+    usz malloc_count;
+    usz free_count;
+    usz outstanding_bytes;
+}
+
+const usz HEADER_BYTES = 16; // keeps the returned block 16-byte aligned and stores its size
+
+fn void* counted_malloc(usz size, void* user) {
+    AllocationCounts* counts = (AllocationCounts*)user;
+    char* block = (char*)mem::malloc((sz)(size + HEADER_BYTES));
+    *(usz*)block = size;
+    counts.malloc_count++;
+    counts.outstanding_bytes += size;
+    return block + HEADER_BYTES;
+}
+
+fn void counted_free(void* pointer, void* user) {
+    if (!pointer) return;
+    AllocationCounts* counts = (AllocationCounts*)user;
+    char* block = (char*)pointer - HEADER_BYTES;
+    counts.free_count++;
+    counts.outstanding_bytes -= *(usz*)block;
+    mem::free(block);
+}
+
+fn void* counted_realloc(void* pointer, usz size, void* user) {
+    if (!pointer) return counted_malloc(size, user);
+    AllocationCounts* counts = (AllocationCounts*)user;
+    char* block = (char*)pointer - HEADER_BYTES;
+    usz old_size = *(usz*)block;
+    char* moved = (char*)mem::malloc((sz)(size + HEADER_BYTES));
+    *(usz*)moved = size;
+    mem::copy(moved + HEADER_BYTES, pointer, (sz)(old_size < size ? old_size : size));
+    mem::free(block);
+    counts.outstanding_bytes = counts.outstanding_bytes - old_size + size;
+    return moved + HEADER_BYTES;
+}
+
+fn void test_allocation_callbacks_route_every_allocation() @test {
+    AllocationCounts counts;
+    ma::AllocationCallbacks callbacks = {
+        .user = &counts,
+        .on_malloc = &counted_malloc,
+        .on_realloc = &counted_realloc,
+        .on_free = &counted_free,
+    };
+    float peak;
+    {
+        char[] engine_storage = allocate_object(ma::engine_size());
+        defer free(engine_storage);
+        ma::Engine* engine = (ma::Engine*)engine_storage.ptr;
+        assert(ma::engine_init(engine, ENGINE_CHANNELS, SAMPLE_RATE, true, &callbacks) == ma::SUCCESS);
+
+        char[] decoder_storage = allocate_object(ma::decoder_size());
+        defer free(decoder_storage);
+        ma::Decoder* decoder = (ma::Decoder*)decoder_storage.ptr;
+        assert(ma::decoder_init_memory(WAV[..].ptr, WAV.len, &callbacks, decoder) == ma::SUCCESS);
+
+        char[] sound_storage = allocate_object(ma::sound_size());
+        defer free(sound_storage);
+        ma::Sound* sound = (ma::Sound*)sound_storage.ptr;
+        assert(ma::sound_init_from_data_source(
+            engine: engine,
+            data_source: decoder,
+            flags: 0,
+            group: null,
+            sound: sound,
+        ) == ma::SUCCESS);
+        assert(ma::sound_start(sound) == ma::SUCCESS);
+
+        float[] frames = mem::new_array(float, READ_BATCH_FRAMES * ENGINE_CHANNELS);
+        defer free(frames);
+        ulong read;
+        assert(ma::engine_read_pcm_frames(engine, frames.ptr, READ_BATCH_FRAMES, &read) == ma::SUCCESS);
+        foreach (sample : frames) peak = math::max(peak, math::abs(sample));
+
+        assert(counts.malloc_count > 0);
+        ma::sound_uninit(sound);
+        ma::decoder_uninit(decoder);
+        ma::engine_uninit(engine);
+    }
+    assert(counts.outstanding_bytes == 0, "outstanding %d", counts.outstanding_bytes);
+    assert(counts.free_count == counts.malloc_count, "malloc %d free %d", counts.malloc_count, counts.free_count);
+    assert(peak > AUDIBLE_PEAK, "peak %f", peak);
+}
