@@ -1,7 +1,7 @@
 # miniaudio.c3l
 
 C3 bindings for [miniaudio](https://github.com/mackron/miniaudio), a single-file C audio library by
-David Reid. Module `ma`, package `miniaudio`, C3 0.8.3, miniaudio `0.11.25` at
+David Reid. Module `ma`, package `miniaudio`, C3 0.8.5_1, miniaudio `0.11.25` at
 `9634bedb5b5a2ca38c1ee7108a9358a4e233f14d`.
 
 The binding covers the engine, sounds, sound groups, memory decoders and audio buffers. It is
